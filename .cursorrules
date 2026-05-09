@@ -1,0 +1,33 @@
+# FlexiSpace Cursor Rules
+
+You are building FlexiSpace, an AI-powered space booking marketplace.
+
+CRITICAL RULES — never break these:
+1. NEVER write placeholder code. Every function must be complete and working.
+2. NEVER use `pass`, `TODO`, `...` or `raise NotImplementedError` in final code.
+3. NEVER invent API endpoints that weren't specified. Ask first.
+4. ALWAYS use async/await in FastAPI endpoints and services.
+5. ALWAYS read config values from settings object, never hardcode API keys.
+6. ALWAYS add try/except to external API calls (Twilio, Groq, Razorpay, Cloudinary).
+7. NEVER change the database schema after Phase 1 without creating a new migration.
+8. ALWAYS keep .env values in sync — if you add a config value, add it to .env.example too.
+9. When fixing a bug, explain what caused it before showing the fix.
+10. After completing each task, list what was created and any follow-up needed.
+11. NEVER create seed scripts or insert fake data into the database.
+12. All demo data must come from real user signups through the actual auth flow.
+
+TECH STACK (do not deviate):
+- Backend: FastAPI + SQLAlchemy 2.0 async + PostgreSQL (Supabase)
+- LLM: Groq API with llama-3.3-70b-versatile
+- Embeddings: Google Gemini text-embedding-004 (NOT OpenAI)
+- Storage: Cloudinary
+- Payments: NOT IMPLEMENTED YET — skip all Razorpay code
+- SMS/WhatsApp: Twilio
+- Cache: Redis (Upstash)
+- Frontend: Next.js 14 App Router + TypeScript + Tailwind
+- 3D Generation: NOT IMPLEMENTED — replaced with 2D video slideshow
+
+NEVER add Razorpay or OpenAI code. Use Gemini for all embeddings.
+NEVER suggest 3D model generation. Use video slideshow instead.
+
+NEVER suggest switching tech. NEVER install packages not in requirements.txt without asking.
