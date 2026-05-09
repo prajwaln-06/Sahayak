@@ -7,6 +7,7 @@ from pydantic_settings import BaseSettings
 from pydantic import Field
 from functools import lru_cache
 from pathlib import Path
+import re
 
 
 # .env lives at the repo root (one level above backend/)
@@ -80,6 +81,8 @@ class Settings(BaseSettings):
     def async_database_url(self) -> str:
         """Convert the standard postgres URL to an asyncpg-compatible URL."""
         url = self.supabase_db_url
+        # Force Supabase transaction pooler port for IPv4-safe demos.
+        url = re.sub(r":5432(?=/)", ":6543", url)
         if url.startswith("postgresql://"):
             url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
         return url

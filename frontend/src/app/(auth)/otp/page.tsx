@@ -59,6 +59,9 @@ export default function OTPPage() {
       });
 
       const { access_token, refresh_token } = res.data;
+      // #region agent log
+      fetch("http://127.0.0.1:7481/ingest/d2476cbd-8cf8-42e2-adbf-9b9708ecf997",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"cfe79d"},body:JSON.stringify({sessionId:"cfe79d",runId:"baseline",hypothesisId:"H4",location:"otp/page.tsx:verify_success",message:"otp verified, attempting login()",data:{hasAccessToken:!!access_token,hasRefreshToken:!!refresh_token},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       const user = await login(access_token, refresh_token);
 
       // Clean up
@@ -66,8 +69,14 @@ export default function OTPPage() {
 
       // Redirect: new user → setup-profile, existing → dashboard
       if (!user.full_name) {
+        // #region agent log
+        fetch("http://127.0.0.1:7481/ingest/d2476cbd-8cf8-42e2-adbf-9b9708ecf997",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"cfe79d"},body:JSON.stringify({sessionId:"cfe79d",runId:"baseline",hypothesisId:"H4",location:"otp/page.tsx:redirect_setup",message:"otp flow redirect setup-profile",data:{hasName:false},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         router.push("/setup-profile");
       } else {
+        // #region agent log
+        fetch("http://127.0.0.1:7481/ingest/d2476cbd-8cf8-42e2-adbf-9b9708ecf997",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"cfe79d"},body:JSON.stringify({sessionId:"cfe79d",runId:"baseline",hypothesisId:"H4",location:"otp/page.tsx:redirect_dashboard",message:"otp flow redirect dashboard",data:{hasName:true},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         router.push("/dashboard");
       }
     } catch (err: unknown) {

@@ -2,6 +2,7 @@
 
 import axios from "axios";
 import { getToken } from "@/lib/auth";
+import { saveTokens, clearTokens } from "@/lib/auth";
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000",
@@ -28,6 +29,9 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
+      // #region agent log
+      fetch("http://127.0.0.1:7481/ingest/d2476cbd-8cf8-42e2-adbf-9b9708ecf997",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"cfe79d"},body:JSON.stringify({sessionId:"cfe79d",runId:"baseline",hypothesisId:"H2",location:"api.ts:response:401",message:"401 intercepted",data:{url:error?.config?.url||null,retrying:!!error?.config?._retry},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       // Try refresh if we have a refresh token
       const refreshToken = typeof window !== "undefined"
         ? localStorage.getItem("flexispace_refresh_token")
@@ -41,15 +45,18 @@ api.interceptors.response.use(
             { refresh_token: refreshToken }
           );
           const { access_token, refresh_token } = res.data;
-          localStorage.setItem("flexispace_token", access_token);
-          localStorage.setItem("flexispace_refresh_token", refresh_token);
+          saveTokens(access_token, refresh_token);
+          // #region agent log
+          fetch("http://127.0.0.1:7481/ingest/d2476cbd-8cf8-42e2-adbf-9b9708ecf997",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"cfe79d"},body:JSON.stringify({sessionId:"cfe79d",runId:"baseline",hypothesisId:"H2",location:"api.ts:refresh:success",message:"token refresh success",data:{url:error?.config?.url||null},timestamp:Date.now()})}).catch(()=>{});
+          // #endregion
           error.config.headers.Authorization = `Bearer ${access_token}`;
           return api(error.config);
         } catch {
           // Refresh failed — clear tokens
-          localStorage.removeItem("flexispace_token");
-          localStorage.removeItem("flexispace_refresh_token");
-          document.cookie = "flexispace_auth=; path=/; max-age=0";
+          // #region agent log
+          fetch("http://127.0.0.1:7481/ingest/d2476cbd-8cf8-42e2-adbf-9b9708ecf997",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"cfe79d"},body:JSON.stringify({sessionId:"cfe79d",runId:"baseline",hypothesisId:"H2",location:"api.ts:refresh:failed",message:"token refresh failed, clearing auth",data:{url:error?.config?.url||null},timestamp:Date.now()})}).catch(()=>{});
+          // #endregion
+          clearTokens();
           window.location.href = "/login";
         }
       }

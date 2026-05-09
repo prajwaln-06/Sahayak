@@ -82,6 +82,30 @@ async def vector_search(
             "distance": round(distance, 4),
         })
 
+    if len(results) < limit:
+        fallback_spaces = await text_search(
+            db,
+            query=query,
+            city=city,
+            capacity=capacity,
+            budget=budget,
+            target_date=target_date,
+            limit=limit,
+        )
+        existing_ids = {r["space"].id for r in results}
+        for space in fallback_spaces:
+            if space.id in existing_ids:
+                continue
+            results.append(
+                {
+                    "space": space,
+                    "match_score": 0.35,
+                    "distance": 1.0,
+                }
+            )
+            if len(results) >= limit:
+                break
+
     logger.info(f"Vector search for '{query[:50]}...' returned {len(results)} results")
     return results
 
@@ -90,6 +114,9 @@ async def text_search(
     db: AsyncSession,
     query: str,
     city: Optional[str] = None,
+    capacity: Optional[int] = None,
+    budget: Optional[float] = None,
+    target_date: Optional[date] = None,
     limit: int = 10,
 ) -> list[Space]:
     """
@@ -108,6 +135,22 @@ async def text_search(
 
     if city:
         stmt = stmt.where(func.lower(Space.city) == city.lower())
+
+    if capacity:
+        stmt = stmt.where(
+            (Space.capacity_seated >= capacity) | (Space.capacity_standing >= capacity)
+        )
+
+    if budget:
+        stmt = stmt.where(Space.base_price_hourly <= budget)
+
+    if target_date:
+        blocked_subq = (
+            select(Availability.space_id)
+            .where(Availability.blocked_date == target_date)
+            .scalar_subquery()
+        )
+        stmt = stmt.where(~Space.id.in_(blocked_subq))
 
     stmt = stmt.order_by(Space.rating_avg.desc()).limit(limit)
 

@@ -3,13 +3,12 @@ FlexiSpace — Listings Router
 All endpoints for space CRUD, photos, availability, pricing, and AI description.
 """
 
-import asyncio
 import logging
 from datetime import date, datetime
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user
@@ -29,6 +28,7 @@ from app.schemas.listing import (
     UpdateSpaceRequest,
 )
 from app.services import listing_service, pricing_service, storage_service
+from app.services.embedding_service import update_space_embedding_task
 
 logger = logging.getLogger(__name__)
 
@@ -43,12 +43,14 @@ router = APIRouter(prefix="/listings", tags=["Listings"])
     summary="Create a new listing (host only)",
 )
 async def create_listing(
+    background_tasks: BackgroundTasks,
     body: CreateSpaceRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     try:
         space = await listing_service.create_space(db, current_user, body.model_dump())
+        background_tasks.add_task(update_space_embedding_task, str(space.id))
         return space
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

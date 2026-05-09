@@ -28,13 +28,22 @@ export function useAuth(): UseAuthReturn {
 
   // ── Fetch user profile from API ────────────────────────────
   const fetchUser = useCallback(async (): Promise<AuthUser | null> => {
+    // #region agent log
+    fetch("http://127.0.0.1:7481/ingest/d2476cbd-8cf8-42e2-adbf-9b9708ecf997",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"cfe79d"},body:JSON.stringify({sessionId:"cfe79d",runId:"baseline",hypothesisId:"H1",location:"useAuth.ts:fetchUser:start",message:"fetchUser start",data:{hasToken:!!isAuthenticated()},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     try {
       const res = await api.get("/auth/me");
       const userData = res.data as AuthUser;
       saveUser(userData);
       setUser(userData);
+      // #region agent log
+      fetch("http://127.0.0.1:7481/ingest/d2476cbd-8cf8-42e2-adbf-9b9708ecf997",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"cfe79d"},body:JSON.stringify({sessionId:"cfe79d",runId:"baseline",hypothesisId:"H1",location:"useAuth.ts:fetchUser:success",message:"fetchUser success",data:{userId:userData?.id||null,isAdmin:!!userData?.is_admin},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       return userData;
     } catch {
+      // #region agent log
+      fetch("http://127.0.0.1:7481/ingest/d2476cbd-8cf8-42e2-adbf-9b9708ecf997",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"cfe79d"},body:JSON.stringify({sessionId:"cfe79d",runId:"baseline",hypothesisId:"H1",location:"useAuth.ts:fetchUser:error",message:"fetchUser failed",data:{reason:"auth_me_failed"},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       return null;
     }
   }, []);
@@ -43,6 +52,7 @@ export function useAuth(): UseAuthReturn {
   useEffect(() => {
     const init = async () => {
       if (!isAuthenticated()) {
+        clearTokens();
         setIsLoading(false);
         return;
       }
@@ -54,7 +64,11 @@ export function useAuth(): UseAuthReturn {
         // Refresh in background
         fetchUser();
       } else {
-        await fetchUser();
+        const fresh = await fetchUser();
+        if (!fresh) {
+          clearTokens();
+          setUser(null);
+        }
         setIsLoading(false);
       }
     };

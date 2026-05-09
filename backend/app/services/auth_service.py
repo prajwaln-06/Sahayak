@@ -5,8 +5,10 @@ Core business logic for OTP generation, verification, user management.
 
 import logging
 import secrets
+import json
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
+from pathlib import Path
 
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,6 +34,24 @@ settings = get_settings()
 OTP_LENGTH = 6
 OTP_EXPIRY_MINUTES = 5
 OTP_MAX_ATTEMPTS = 3
+_DEBUG_LOG_PATH = Path(__file__).resolve().parents[3] / "debug-cfe79d.log"
+
+
+def _debug_log(run_id: str, hypothesis_id: str, location: str, message: str, data: dict) -> None:
+    try:
+        payload = {
+            "sessionId": "cfe79d",
+            "runId": run_id,
+            "hypothesisId": hypothesis_id,
+            "location": location,
+            "message": message,
+            "data": data,
+            "timestamp": int(datetime.now(timezone.utc).timestamp() * 1000),
+        }
+        with _DEBUG_LOG_PATH.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(payload, ensure_ascii=True) + "\n")
+    except Exception:
+        pass
 
 
 def _generate_otp() -> str:
@@ -72,6 +92,15 @@ async def send_otp(db: AsyncSession, phone: str) -> dict:
 
     # Generate new OTP
     plain_otp = _generate_otp()
+    if settings.node_env == "development":
+        plain_otp = "123456"
+        _debug_log(
+            "baseline",
+            "H6",
+            "auth_service.py:send_otp:dev_otp",
+            "development OTP override active",
+            {"phone_suffix": phone[-4:] if phone else None},
+        )
     hashed = hash_otp(plain_otp)
 
     otp_token = OTPToken(
@@ -87,7 +116,24 @@ async def send_otp(db: AsyncSession, phone: str) -> dict:
     # Send SMS
     sms_sent = await send_otp_sms(phone, plain_otp)
     if not sms_sent:
-        raise Exception("Failed to send OTP via SMS. Please try again.")
+        _debug_log(
+            "baseline",
+            "H6",
+            "auth_service.py:send_otp:sms_failed",
+            "Twilio OTP send failed",
+            {"phone_suffix": phone[-4:] if phone else None, "env": settings.node_env},
+        )
+        if settings.node_env != "development":
+            raise Exception("Failed to send OTP via SMS. Please try again.")
+        logger.warning(f"Twilio SMS failed in development mode. Use OTP {plain_otp} for {phone}.")
+    else:
+        _debug_log(
+            "baseline",
+            "H6",
+            "auth_service.py:send_otp:sms_sent",
+            "Twilio OTP send succeeded",
+            {"phone_suffix": phone[-4:] if phone else None},
+        )
 
     logger.info(f"OTP sent to {phone}")
     return {"message": "OTP sent successfully. Valid for 5 minutes."}

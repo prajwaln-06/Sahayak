@@ -45,36 +45,50 @@ export default function SpaceMediaViewer({ photos, videoUrl, title }: SpaceMedia
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isLightboxOpen, handleNext, handlePrev]);
 
+  const hasPhotos = photos.length > 0;
+  const hasVideo = !!videoUrl;
+  const hasMedia = hasPhotos || hasVideo;
+
   return (
     <div className="w-full bg-black rounded-b-none lg:rounded-2xl lg:overflow-hidden relative shadow-lg group">
       {/* Tabs */}
-      <div className="absolute top-4 left-4 z-10 flex gap-2">
-        <button
-          onClick={() => setActiveTab("photos")}
-          className={`px-4 py-1.5 rounded-full text-xs font-semibold backdrop-blur transition-all ${
-            activeTab === "photos" ? "bg-white text-black shadow-md" : "bg-black/50 text-white hover:bg-black/70"
-          }`}
-        >
-          📷 Photos
-        </button>
-        <button
-          onClick={() => setActiveTab("video")}
-          className={`px-4 py-1.5 rounded-full text-xs font-semibold backdrop-blur transition-all ${
-            activeTab === "video" ? "bg-white text-black shadow-md" : "bg-black/50 text-white hover:bg-black/70"
-          }`}
-        >
-          🎬 Video Tour
-        </button>
-      </div>
+      {hasMedia && (
+        <div className="absolute top-4 left-4 z-10 flex gap-2">
+          <button
+            onClick={() => setActiveTab("photos")}
+            className={`px-4 py-1.5 rounded-full text-xs font-semibold backdrop-blur transition-all ${
+              activeTab === "photos" ? "bg-white text-black shadow-md" : "bg-black/50 text-white hover:bg-black/70"
+            }`}
+          >
+            📷 Photos
+          </button>
+          {hasVideo && (
+            <button
+              onClick={() => setActiveTab("video")}
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold backdrop-blur transition-all ${
+                activeTab === "video" ? "bg-white text-black shadow-md" : "bg-black/50 text-white hover:bg-black/70"
+              }`}
+            >
+              🎬 Video Tour
+            </button>
+          )}
+        </div>
+      )}
 
-      {activeTab === "photos" && (
+      {!hasMedia && (
+        <div className="w-full aspect-video bg-gray-900 flex flex-col items-center justify-center">
+          <p className="text-gray-300 text-sm">No media uploaded yet</p>
+        </div>
+      )}
+
+      {hasMedia && activeTab === "photos" && (
         <div className="relative w-full h-full flex flex-col">
           {/* Main Display */}
           <div 
             className="relative w-full aspect-video cursor-pointer bg-gray-900"
             onClick={() => photos.length > 0 && setIsLightboxOpen(true)}
           >
-            {photos.length > 0 ? (
+            {hasPhotos ? (
               <>
                 {photos.map((src, i) => (
                   <div
@@ -160,7 +174,7 @@ export default function SpaceMediaViewer({ photos, videoUrl, title }: SpaceMedia
         </div>
       )}
 
-      {activeTab === "video" && (
+      {hasVideo && activeTab === "video" && (
         <div className="w-full aspect-video bg-gray-900 flex flex-col items-center justify-center relative">
           {videoUrl ? (
             <>

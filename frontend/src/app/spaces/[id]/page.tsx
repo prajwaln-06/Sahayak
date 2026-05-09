@@ -147,8 +147,6 @@ export default function SpaceDetailPage() {
     </div>
   );
 
-  const photos = space.photo_urls.length > 0 ? space.photo_urls : [space.thumbnail_url].filter(Boolean) as string[];
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -163,8 +161,8 @@ export default function SpaceDetailPage() {
       <div className="bg-black/5">
         <div className="max-w-6xl mx-auto lg:mt-6 lg:mb-8">
           <SpaceMediaViewer
-            photos={photos}
-            videoUrl={space.video_url}
+            photos={space.photo_urls || []}
+            videoUrl={space.video_url || null}
             title={space.title}
           />
         </div>

@@ -2,9 +2,21 @@
 
 import { useAuth } from "@/hooks/useAuth";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function DashboardPage() {
   const { user, isLoading, logout } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      // #region agent log
+      fetch("http://127.0.0.1:7481/ingest/d2476cbd-8cf8-42e2-adbf-9b9708ecf997",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"cfe79d"},body:JSON.stringify({sessionId:"cfe79d",runId:"baseline",hypothesisId:"H5",location:"dashboard/page.tsx:redirect_login",message:"dashboard redirected to login due to missing user",data:{isLoading,userPresent:!!user},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+      router.replace("/login");
+    }
+  }, [isLoading, user, router]);
 
   if (isLoading) {
     return (
@@ -12,6 +24,10 @@ export default function DashboardPage() {
         <LoadingSpinner size="lg" />
       </div>
     );
+  }
+
+  if (!user) {
+    return null;
   }
 
   return (

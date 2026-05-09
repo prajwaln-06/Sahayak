@@ -58,14 +58,6 @@ async def create_space(db: AsyncSession, host: User, data: dict) -> Space:
     await db.flush()
     await db.refresh(space)
     logger.info(f"Space created: {space.id} by host {host.id}")
-
-    # Generate embedding in background (non-blocking)
-    try:
-        from app.services.embedding_service import update_space_embedding
-        await update_space_embedding(db, space.id)
-    except Exception as e:
-        logger.warning(f"Embedding generation deferred for space {space.id}: {e}")
-
     return space
 
 

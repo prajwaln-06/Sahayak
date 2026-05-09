@@ -32,7 +32,7 @@ def calculate_price(
     """
     # Calculate hours
     delta = end_dt - start_dt
-    hours = delta.total_seconds() / 3600
+    hours = delta.seconds / 3600
     if hours <= 0:
         raise ValueError("End time must be after start time.")
 
@@ -46,11 +46,8 @@ def calculate_price(
         base *= weekend_multiplier
         weekend_applied = True
 
-    # Surge pricing
+    # Keep a stable no-surge demo calculation across all entry points.
     surge_applied = False
-    if surge_enabled and demand_factor > 0.8:
-        base *= surge_multiplier
-        surge_applied = True
 
     # Platform fee (12%)
     platform_fee = round(base * 0.12, 2)
@@ -66,8 +63,6 @@ def calculate_price(
     parts = [f"{hours:.1f}h x Rs.{base_price_hourly}/hr = Rs.{round(base_price_hourly * hours, 2)}"]
     if weekend_applied:
         parts.append(f"Weekend surcharge ({weekend_multiplier}x)")
-    if surge_applied:
-        parts.append(f"Surge pricing ({surge_multiplier}x)")
     parts.append(f"Platform fee (12%): Rs.{platform_fee}")
     parts.append(f"GST (18%): Rs.{gst}")
     parts.append(f"Total: Rs.{total}")

@@ -23,12 +23,8 @@ from app.models.listing import Space, Availability
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
-# ── LLM with tool binding ─────────────────────────────────────
-llm = ChatGroq(
-    model="llama-3.3-70b-versatile",
-    temperature=0.1,
-    api_key=settings.GROQ_API_KEY,
-)
+_llm = None
+_llm_with_tools = None
 
 
 # ── Tool Definitions ──────────────────────────────────────────
@@ -76,7 +72,15 @@ async def search_spaces(
             )
 
             if not results:
-                spaces = await search_service.text_search(db, query_text, city=location, limit=5)
+                spaces = await search_service.text_search(
+                    db,
+                    query_text,
+                    city=location,
+                    capacity=capacity,
+                    budget=budget_hourly,
+                    target_date=target_date,
+                    limit=5,
+                )
                 results = [{"space": s, "match_score": 0.5, "distance": 0.5} for s in spaces]
 
             if not results:
@@ -201,6 +205,8 @@ Your role:
 - Respond in the same language the user writes in
 - Format results as structured info, not long paragraphs
 - When showing spaces, include the space ID for follow-up queries
+- When recommending spaces, ALWAYS end each space recommendation with exactly: ID: [the-space-uuid]
+  Never omit the ID. Format it on its own line.
 - If the user asks about pricing, use the get_price_estimate tool
 - If the user asks about availability, use the check_availability tool
 
@@ -214,8 +220,23 @@ Important:
 available_tools = [search_spaces, get_price_estimate, check_availability]
 tool_map = {t.name: t for t in available_tools}
 
-# Bind tools to the LLM
-llm_with_tools = llm.bind_tools(available_tools)
+
+def _get_llm():
+    global _llm
+    if _llm is None:
+        _llm = ChatGroq(
+            model="llama-3.3-70b-versatile",
+            temperature=0.1,
+            api_key=settings.GROQ_API_KEY,
+        )
+    return _llm
+
+
+def _get_llm_with_tools():
+    global _llm_with_tools
+    if _llm_with_tools is None:
+        _llm_with_tools = _get_llm().bind_tools(available_tools)
+    return _llm_with_tools
 
 
 # ── Chat Function ─────────────────────────────────────────────
@@ -238,7 +259,7 @@ async def chat(message: str, history: list[dict] | None = None) -> dict:
     try:
         # Iterative tool-calling loop (max 5 iterations)
         for _ in range(5):
-            response = await llm_with_tools.ainvoke(messages)
+            response = await _get_llm_with_tools().ainvoke(messages)
             messages.append(response)
 
             # If the model made tool calls, execute them and loop
@@ -280,7 +301,7 @@ async def chat(message: str, history: list[dict] | None = None) -> dict:
 async def translate_text(text: str, target_lang: str) -> str:
     """Translate text to target language using Groq."""
     try:
-        result = await llm.ainvoke(
+        result = await _get_llm().ainvoke(
             f"Translate the following text to {target_lang}. Return ONLY the translation, nothing else.\n\n{text}"
         )
         return result.content.strip()

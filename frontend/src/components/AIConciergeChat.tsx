@@ -35,7 +35,20 @@ const LANGS = ["EN", "HI", "KN"];
 function parseSpacesFromResponse(text: string, spaceIds: string[]): SpaceResult[] {
   const spaces: SpaceResult[] = [];
   if (!text) return spaces;
-  for (const id of spaceIds) {
+  const primaryMatches = Array.from(text.matchAll(/ID:\s*([a-f0-9-]{36})/gi)).map((m) => m[1]);
+  const fallbackMatches =
+    primaryMatches.length === 0
+      ? Array.from(text.matchAll(/id["\s:]+([a-f0-9-]{36})/gi)).map((m) => m[1])
+      : [];
+  const parsedIds = primaryMatches.length > 0 ? primaryMatches : fallbackMatches;
+  const mergedIds = Array.from(new Set([...spaceIds, ...parsedIds]));
+  console.debug("AI concierge parsed IDs", {
+    apiSpaceIds: spaceIds,
+    parsedIds,
+    mergedIds,
+  });
+
+  for (const id of mergedIds) {
     // Try to extract info from the text around the ID
     const idIndex = text.indexOf(id);
     if (idIndex === -1) continue;

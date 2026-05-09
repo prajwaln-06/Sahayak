@@ -10,7 +10,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
-from sqlalchemy import func, select, text, and_
+from sqlalchemy import String, cast, func, select, text, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, get_admin_user
@@ -79,7 +79,9 @@ async def admin_dashboard(
     )).scalar() or 0
     
     pending_kyc = (await db.execute(
-        select(func.count(User.id)).where(User.kyc_status.in_([KYCStatus.PENDING]))
+        select(func.count(User.id)).where(
+            cast(User.kyc_status, String).in_(["PENDING", "UNDER_REVIEW"])
+        )
     )).scalar() or 0
 
     recent_bookings_query = (

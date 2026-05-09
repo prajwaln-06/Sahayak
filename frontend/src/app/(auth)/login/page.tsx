@@ -1,18 +1,27 @@
 "use client";
 
 import { useState, FormEvent } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import PhoneInput from "@/components/PhoneInput";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import api from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { user, isLoading: authLoading } = useAuth();
   const [phone, setPhone] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
   const isValid = phone.length === 10;
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.replace("/dashboard");
+    }
+  }, [authLoading, user, router]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();

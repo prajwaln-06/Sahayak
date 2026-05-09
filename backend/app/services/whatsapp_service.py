@@ -49,20 +49,17 @@ async def send_whatsapp(phone: str, body: str) -> bool:
     return await _send(phone, body)
 
 
-async def send_booking_confirmation(phone: str, booking) -> bool:
-    """Send booking confirmation to renter."""
-    start = booking.start_datetime
-    start_str = start.strftime("%d %b %Y, %I:%M %p") if isinstance(start, datetime) else str(start)
-    body = (
-        f"✅ FlexiSpace Booking Confirmed!\n\n"
-        f"📍 Space booked successfully\n"
-        f"📅 {start_str}\n"
-        f"👥 {booking.capacity_requested or 'N/A'} guests\n"
-        f"💰 Total: Rs.{float(booking.total_amount):,.2f}\n"
-        f"🆔 Booking ID: {str(booking.id)[:8]}\n\n"
+async def send_booking_confirmation(phone: str, booking, space):
+    message = (
+        f"✅ FlexiSpace Booking Confirmed!\n"
+        f"📍 {space.title}\n"
+        f"📅 {booking.start_datetime.strftime('%d %b %Y, %I:%M %p')}\n"
+        f"👥 {booking.capacity_requested} people\n"
+        f"💰 ₹{booking.total_amount}\n"
+        f"🆔 Booking ID: {str(booking.id)[:8].upper()}\n"
         f"See you there! 🎉"
     )
-    return await _send(phone, body)
+    return await send_whatsapp(phone, message)
 
 
 async def send_otp(phone: str, otp_code: str) -> bool:

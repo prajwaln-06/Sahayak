@@ -19,6 +19,7 @@ from app.models.booking import Booking, BookingStatus
 from app.models.listing import Space, Availability
 from app.models.user import User
 from app.services import pricing_service
+from app.services.whatsapp_service import send_booking_confirmation
 
 logger = logging.getLogger(__name__)
 
@@ -141,16 +142,7 @@ async def create_booking(
 
     # 6. Send WhatsApp confirmation (fire-and-forget)
     try:
-        from app.services.twilio_service import send_whatsapp
-        await send_whatsapp(
-            current_user.phone,
-            f"✅ Booking Confirmed!\n\n"
-            f"Space: {space.title}\n"
-            f"Date: {body.start_datetime.strftime('%d %b %Y, %I:%M %p')}\n"
-            f"Total: Rs.{pricing['total']:,.2f}\n"
-            f"Booking ID: {booking.id}\n\n"
-            f"Thank you for choosing FlexiSpace! 🎉",
-        )
+        await send_booking_confirmation(current_user.phone, booking, space)
     except Exception as e:
         logger.warning(f"WhatsApp notification failed: {e}")
 

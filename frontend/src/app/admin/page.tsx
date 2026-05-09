@@ -18,11 +18,23 @@ interface Stats {
   recent_bookings: any[];
 }
 
+const EMPTY_STATS: Stats = {
+  total_users: 0,
+  total_hosts: 0,
+  total_vendors: 0,
+  total_spaces: 0,
+  total_bookings: 0,
+  confirmed_bookings: 0,
+  pending_kyc: 0,
+  recent_bookings: [],
+};
+
 export default function AdminDashboardPage() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
-  const [stats, setStats] = useState<Stats | null>(null);
+  const [stats, setStats] = useState<Stats>(EMPTY_STATS);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (authLoading) return;
@@ -33,17 +45,29 @@ export default function AdminDashboardPage() {
     
     api.get("/admin/dashboard")
       .then((res) => {
-        setStats(res.data);
+        const data = res.data || {};
+        setStats({
+          total_users: Number(data.total_users ?? 0),
+          total_hosts: Number(data.total_hosts ?? 0),
+          total_vendors: Number(data.total_vendors ?? 0),
+          total_spaces: Number(data.total_spaces ?? 0),
+          total_bookings: Number(data.total_bookings ?? 0),
+          confirmed_bookings: Number(data.confirmed_bookings ?? 0),
+          pending_kyc: Number(data.pending_kyc ?? 0),
+          recent_bookings: Array.isArray(data.recent_bookings) ? data.recent_bookings : [],
+        });
+        setError("");
         setLoading(false);
       })
       .catch((err) => {
         console.error(err);
+        setError("Failed to load admin dashboard stats.");
+        setStats(EMPTY_STATS);
         setLoading(false);
       });
   }, [user, authLoading, router]);
 
-  if (authLoading || loading) return <div className="min-h-screen flex items-center justify-center"><LoadingSpinner size="lg" /></div>;
-  if (!stats) return null;
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center"><LoadingSpinner size="lg" /></div>;
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -67,27 +91,33 @@ export default function AdminDashboardPage() {
       <div className="flex-1 overflow-auto p-8">
         <h1 className="text-2xl font-bold text-[#0D1B2A] mb-6">Dashboard Overview</h1>
 
+        {error && (
+          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
         {/* Stats Row */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white p-6 rounded-2xl border-t-4 border-blue-500 shadow-sm flex flex-col">
             <span className="text-blue-500 font-bold mb-2">👤</span>
             <span className="text-gray-500 text-sm font-medium">Total Users</span>
-            <span className="text-3xl font-bold text-gray-900">{stats.total_users}</span>
+            <span className="text-3xl font-bold text-gray-900">{loading ? "..." : stats.total_users}</span>
           </div>
           <div className="bg-white p-6 rounded-2xl border-t-4 border-green-500 shadow-sm flex flex-col">
             <span className="text-green-500 font-bold mb-2">🏠</span>
             <span className="text-gray-500 text-sm font-medium">Total Hosts</span>
-            <span className="text-3xl font-bold text-gray-900">{stats.total_hosts}</span>
+            <span className="text-3xl font-bold text-gray-900">{loading ? "..." : stats.total_hosts}</span>
           </div>
           <div className="bg-white p-6 rounded-2xl border-t-4 border-purple-500 shadow-sm flex flex-col">
             <span className="text-purple-500 font-bold mb-2">📅</span>
             <span className="text-gray-500 text-sm font-medium">Total Bookings</span>
-            <span className="text-3xl font-bold text-gray-900">{stats.total_bookings}</span>
+            <span className="text-3xl font-bold text-gray-900">{loading ? "..." : stats.total_bookings}</span>
           </div>
           <div className="bg-white p-6 rounded-2xl border-t-4 border-orange-500 shadow-sm flex flex-col">
             <span className="text-orange-500 font-bold mb-2">⏳</span>
             <span className="text-gray-500 text-sm font-medium">Pending KYC</span>
-            <span className="text-3xl font-bold text-gray-900">{stats.pending_kyc}</span>
+            <span className="text-3xl font-bold text-gray-900">{loading ? "..." : stats.pending_kyc}</span>
           </div>
         </div>
 
@@ -107,7 +137,15 @@ export default function AdminDashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {stats.recent_bookings.map((b) => (
+              {loading ? (
+                <tr>
+                  <td className="px-6 py-4 text-gray-500" colSpan={5}>Loading recent bookings...</td>
+                </tr>
+              ) : stats.recent_bookings.length === 0 ? (
+                <tr>
+                  <td className="px-6 py-4 text-gray-500" colSpan={5}>No recent bookings</td>
+                </tr>
+              ) : stats.recent_bookings.map((b) => (
                 <tr key={b.id} className="border-b last:border-b-0 hover:bg-gray-50">
                   <td className="px-6 py-4 font-medium text-gray-900">{b.space_title}</td>
                   <td className="px-6 py-4 text-gray-600">{b.renter_name}</td>

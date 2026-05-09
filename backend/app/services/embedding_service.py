@@ -1,8 +1,8 @@
 import urllib.request
 import json
 import asyncio
-import os
 from app.config import get_settings
+from app.database import async_session
 
 settings = get_settings()
 
@@ -51,3 +51,9 @@ async def update_space_embedding(space_id: str, db):
     embedding = await embed_space(space)
     space.embedding = embedding
     await db.commit()
+
+
+async def update_space_embedding_task(space_id: str):
+    """Background-safe embedding updater using its own DB session."""
+    async with async_session() as db:
+        await update_space_embedding(space_id, db)
